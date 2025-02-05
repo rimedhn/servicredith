@@ -25,6 +25,11 @@
         margin-bottom: 20px;
       }
 
+      .sin-bordes {
+      border-collapse: collapse;
+      border: none;
+      }
+      
       table,
       th,
       td {
@@ -97,17 +102,15 @@
     </style>
   </head>
   <body>
-    <div class="label">
-      <table style="width: 100%">
-        <tr  style="border-collapse: collapse; border: none;">
+    <div class="label">    
+      <table style="width: 100%" class="sin-bordes">
+        <tr>
           <th colspan="3" style="width: 10%">
             <img src="https://github.com/rimedhn/servicredith/blob/main/logoindex.jpeg?raw=true" alt="Mi imagen" class="mi-imagen" />
           </th>
           <th colspan="9" style="width: 90%; text-align: left">
             <b style="font-size: 30px" id="empresa"></b><br />
-
             <b>RTN: <span id="rtn"></span></b><br />
-
             <b>Direccion: <span id="direccion"></span></b><br />
             <b>Telefono: <span id="telefono"></span></b><br />
             <b>Email: <span id="email"></span></b>
