@@ -199,6 +199,11 @@
               vertical-align: text-top;
             "
           >
+            <span id="motor"></span><br />
+            <span id="chasis"></span><br />
+            <span id="color"></span><br />
+            <span id="año"></span><br />
+            <span id="marca">"  "</span><span id="modelo">"  "</span><span id="combustible"></span>
             <b>Datos del cliente exonerado</b><br />
             <span>Orden de compra exenta: <b id="ocexe"></b></span>
             <span>No. Registro exonerado: <b id="ocexo"></b></span>
@@ -223,10 +228,6 @@
             <div align="center">
               ------------------------------------------------------------------------
             </div>
-            <span id="motor"></span><br />
-            <span id="chasis"></span><br />
-            <span id="color"></span><br />
-            <span id="año"></span><br />
             <span id="observacion"></span><br />
           </td>
           <td
@@ -369,6 +370,9 @@
         document.getElementById("chasis").textContent = getQueryParam("chasis");
         document.getElementById("color").textContent = getQueryParam("color");
         document.getElementById("año").textContent = getQueryParam("año");
+        document.getElementById("marca").textContent = getQueryParam("marca");
+        document.getElementById("modelo").textContent = getQueryParam("modelo");
+        document.getElementById("combustible").textContent = getQueryParam("combustible");
         document.getElementById("observacion").textContent = getQueryParam("observacion");
         document.getElementById("subtotal").textContent = getQueryParam("subtotal");
         document.getElementById("descuento").textContent = getQueryParam("descuento");
