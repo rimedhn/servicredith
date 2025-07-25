@@ -498,7 +498,7 @@ if (whatsappFloatingButton) {
             const imageUrl = product.imageUrl || `https://placehold.co/300x200/e0e0e0/555555?text=${encodeURIComponent(product.name || 'Producto')}`;
 
             productCard.innerHTML = `
-                <img src="${imageUrl}" alt="${product.name}" class="w-full h-40 object-cover rounded-md mb-2" onerror="this.onerror=null;this.src='https://placehold.co/300x200/e0e0e0/555555?text=Imagen+no+disponible';">
+                <img src="${imageUrl}" alt="${product.name}" class="w-full h-40 object-contain rounded-md mb-2" onerror="this.onerror=null;this.src='https://placehold.co/300x200/e0e0e0/555555?text=Imagen+no+disponible';">
                 <h3 class="text-xl font-bold text-gray-800 mb-0.5 flex-grow">${product.name}</h3>
                 <p class="text-gray-600 text-sm mb-0.5 line-clamp-3">${product.description}</p>
                 <div class="text-2xl font-extrabold text-green-600 mb-0.5">L${product.price.toFixed(2)}</div>
