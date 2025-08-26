@@ -213,7 +213,7 @@
                         imageUrl: product["Imagen URL"],
                         status: product["Estado"]
                     }))
-                    .filter(product => product.status && product.status.toLowerCase() === 'activo');
+                    .filter(product => product.status && product.status.toLowerCase() === 'Activo');
                 categories.clear();
                 allProducts.forEach(product => {
                     if (product.category) categories.add(product.category);
