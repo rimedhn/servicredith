@@ -289,7 +289,7 @@ function showCustomAlert(message, buttonType = null) {
         // 3. En la pestaña 'Publicar', selecciona la hoja que contiene tus productos.
         // 4. Elige 'Valores separados por comas (.csv)' como formato.
         // 5. Haz clic en 'Publicar' y copia la URL generada.
-        const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcg1IEHS_LDKYAV1IjW4iiYazc1YMrNd_qDpPTjHVjqBag6dgVi9MkbAkdtZ6_xqDPeugBuG9lZMEj/pub?gid=1288309096&single=true&output=csv'; // ¡EJEMPLO! REEMPLAZA ESTO.
+        const OPENSHEET_URL = 'https://opensheet.elk.sh/1Ir9DOJhz17Y1zTjNq31Xi9MatIiw5BkMU1bk7C8B7bk/CatalagoDigital'; // ¡EJEMPLO! REEMPLAZA ESTO.
 
         // ¡IMPORTANTE! Reemplaza con tu número de teléfono de WhatsApp (incluyendo código de país, sin '+' ni espacios).
         // Ejemplo para Honduras: '50495660495'
@@ -327,62 +327,38 @@ if (whatsappFloatingButton) {
          * Filtra los productos que no están en estado 'Activo'.
          * Extrae las categorías únicas y renderiza los filtros y productos.
          */
-        async function loadProducts() {
-            try {
-                const response = await fetch(GOOGLE_SHEETS_CSV_URL);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const csvText = await response.text();
-                const lines = csvText.split('\n').filter(line => line.trim() !== ''); // Eliminar líneas vacías
+async function loadProducts() {
+    try {
+        const response = await fetch(OPENSHEET_URL);
+        const data = await response.json();
 
-                if (lines.length < 2) {
-                    showCustomAlert('No hay datos válidos en el Google Sheet.');
-                    document.getElementById('productGrid').innerHTML = '<p class="text-center text-gray-600 col-span-full">No hay productos disponibles.</p>';
-                    return;
-                }
+        // Mapeo de campos según la hoja Google
+        allProducts = data
+            .map(product => ({
+                id: product["ID"],
+                name: product["Nombre Producto"],
+                description: product["Descripción"],
+                price: parseFloat(product["Precio"]),
+                category: product["Categoría"],
+                imageUrl: product["Imagen URL"],
+                status: product["Estado"]
+            }))
+            .filter(product => product.status && product.status.toLowerCase() === 'activo'); // Solo los activos
 
-                const headers = lines[0].split(',').map(header => header.trim());
+        // Extraer categorías únicas
+        categories.clear();
+        allProducts.forEach(product => {
+            if (product.category) categories.add(product.category);
+        });
 
-                // Mapeo de encabezados para asegurar nombres de propiedades consistentes
-                const headerMap = {
-                    'ID': 'id',
-                    'Nombre Producto': 'name',
-                    'Descripción': 'description',
-                    'Precio': 'price',
-                    'Categoría': 'category',
-                    'Imagen URL': 'imageUrl',
-                    'Estado': 'status'
-                };
-
-                allProducts = lines.slice(1).map(line => {
-                    const values = line.split(',');
-                    let product = {};
-                    headers.forEach((header, index) => {
-                        const propName = headerMap[header] || header.toLowerCase().replace(/\s/g, '');
-                        product[propName] = values[index] ? values[index].trim() : '';
-                    });
-                    // Asegurar que el precio sea un número
-                    product.price = parseFloat(product.price || 0); // Default a 0 si no es válido
-                    return product;
-                }).filter(product => product.status && product.status.toLowerCase() === 'activo'); // Filtrar por estado 'Activo'
-
-                // Extraer categorías únicas
-                categories.clear(); // Limpiar el Set de categorías antes de añadir
-                allProducts.forEach(product => {
-                    if (product.category) {
-                        categories.add(product.category);
-                    }
-                });
-
-                populateCategorySelect(); // Llenar el <select>
-                renderProducts('Todos'); // Mostrar todos los productos por defecto
-            } catch (error) {
-                console.error('Error al cargar los productos:', error);
-                showCustomAlert('Error al cargar los productos. Por favor, verifica la URL del Google Sheet y tu conexión a internet.');
-                document.getElementById('productGrid').innerHTML = '<p class="text-center text-red-500 col-span-full">Error al cargar los productos.</p>';
-            }
-        }
+        populateCategorySelect();
+        renderProducts('Todos');
+    } catch (error) {
+        console.error('Error al cargar los productos:', error);
+        showCustomAlert('Error al cargar los productos desde la hoja de Google.');
+        document.getElementById('productGrid').innerHTML = '<p class="text-center text-red-500 col-span-full">Error al cargar los productos.</p>';
+    }
+}
 
         /**
          * Rellena el elemento <select> de categorías con las categorías únicas.
