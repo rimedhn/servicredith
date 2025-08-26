@@ -33,10 +33,10 @@
             </div>
         </div>
     </header>
-
+    
 <section class="mb-8">
     <div class="relative w-full overflow-hidden" style="padding-top: 25%;">
-        <img src="https://github.com/rimedhn/servicredith/blob/main/Banner%20Servicredith.png?raw=true" alt="Banner" class="absolute top-0 left-0 w-full h-full object-contain">
+        <img src="https://github.com/rimedhn/plasticoslabendicion/blob/main/Banner%20catalago%20en%20linea.png?raw=true" alt="Banner" class="absolute top-0 left-0 w-full h-full object-contain">
     </div>
 </section>
 
@@ -48,6 +48,7 @@
         </div>
             
         <div class="flex flex-col lg:flex-row gap-6">
+
             <aside class="lg:w-1/4 bg-white p-6 rounded-lg shadow-lg h-fit lg:sticky lg:top-8">
                 <h2 class="text-2xl font-bold text-gray-700 mb-4">Categorías</h2>
                 <div id="categoryFilters" class="w-full">
@@ -138,8 +139,10 @@
     </div>
     
     <script>
-        // URL JSON de opensheet.elk.sh para la hoja 'CatalagoDigital'
+        // URL JSON de opensheet.elk.sh para la hoja 'demo1'
         const OPENSHEET_URL = 'https://opensheet.elk.sh/1Ir9DOJhz17Y1zTjNq31Xi9MatIiw5BkMU1bk7C8B7bk/CatalagoDigital';
+
+        // Reemplaza con tu número de WhatsApp
         const WHATSAPP_NUMBER = '50495660495';
 
         const whatsappFloatingButton = document.getElementById('whatsappFloatingButton');
@@ -158,6 +161,7 @@
         const cartModalCloseButton = document.getElementById('cartModalCloseButton');
         const searchBar = document.getElementById('searchBar'); 
 
+        // --- Modal personalizado ---
         function showCustomAlert(message, buttonType = null) {
             const modal = document.getElementById('customAlertModal');
             const msgElement = document.getElementById('customAlertMessage');
@@ -199,10 +203,13 @@
             };
         }
 
+        // --- Cargar productos desde JSON ---
         async function loadProducts() {
             try {
                 const response = await fetch(OPENSHEET_URL);
                 const data = await response.json();
+                console.log("Datos recibidos:", data); // <-- Verifica aquí
+
                 allProducts = data
                     .map(product => ({
                         id: product["ID"],
@@ -213,7 +220,8 @@
                         imageUrl: product["Imagen URL"],
                         status: product["Estado"]
                     }))
-                    .filter(product => product.status && product.status.toLowerCase() === 'Activo');
+                    .filter(product => product.status && product.status.toLowerCase() === 'activo');
+
                 categories.clear();
                 allProducts.forEach(product => {
                     if (product.category) categories.add(product.category);
@@ -296,7 +304,12 @@
             );
             const imageUrl = product.imageUrl || `https://placehold.co/300x200/e0e0e0/555555?text=${encodeURIComponent(product.name || 'Producto')}`;
             productCard.innerHTML = `
+            <a href="${imageUrl}"
+               data-fslightbox
+               data-type="image"
+               data-title="${product.name}">
                 <img src="${imageUrl}" alt="${product.name}" class="w-full h-40 object-contain rounded-md mb-2" onerror="this.onerror=null;this.src='https://placehold.co/300x200/e0e0e0/555555?text=Imagen+no+disponible';">
+            </a>
                 <h3 class="text-xl font-bold text-gray-800 mb-0.5 flex-grow">${product.name}</h3>
                 <p class="text-gray-600 text-sm mb-0.5 line-clamp-3">${product.description}</p>
                 <div class="text-2xl font-extrabold text-green-600 mb-0.5">L${product.price.toFixed(2)}</div>
