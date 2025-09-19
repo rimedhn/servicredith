@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Ventas y Compras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .loading { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        .error-message { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-line text-3xl text-blue-600"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+                <p class="text-gray-600 mt-2">Accede a tu sistema de ventas y compras</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Usuario o Email</label>
+                    <input type="text" id="loginUser" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                    <input type="password" id="loginPassword" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <button type="submit" id="loginBtn" 
+                        class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
+                    <span id="loginBtnText">Iniciar Sesión</span>
+                    <i id="loginSpinner" class="fas fa-spinner loading hidden ml-2"></i>
+                </button>
+            </form>
+            
+            <div id="loginError" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg error-message"></div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden min-h-screen bg-gray-50">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-4">
+                <div class="flex items-center space-x-4">
+                    <button id="sidebarToggle" class="lg:hidden text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-900" id="userWelcome">Bienvenido</p>
+                        <p class="text-xs text-gray-500" id="userRole">Usuario</p>
+                    </div>
+                    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-200">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Salir
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside id="sidebar" class="bg-white w-64 min-h-screen shadow-lg sidebar-transition transform -translate-x-full lg:translate-x-0 fixed lg:relative z-30">
+                <nav class="p-6">
+                    <ul class="space-y-2">
+                        <li><a href="#" onclick="showSection('overview')" class="nav-link flex items-center p-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-200">
+                            <i class="fas fa-tachometer-alt mr-3"></i>Resumen General</a></li>
+                        <li><a href="#" onclick="showSection('sales')" class="nav-link flex items-center p-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-200">
+                            <i class="fas fa-shopping-cart mr-3"></i>Ventas</a></li>
+                        <li><a href="#" onclick="showSection('purchases')" class="nav-link flex items-center p-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-200">
+                            <i class="fas fa-truck mr-3"></i>Compras</a></li>
+                        <li><a href="#" onclick="showSection('clients')" class="nav-link flex items-center p-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-200">
+                            <i class="fas fa-users mr-3"></i>Clientes</a></li>
+                        <li><a href="#" onclick="showSection('products')" class="nav-link flex items-center p-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-200">
+                            <i class="fas fa-box mr-3"></i>Productos</a></li>
+                        <li><a href="#" onclick="showSection('reports')" class="nav-link flex items-center p-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-200">
+                            <i class="fas fa-chart-bar mr-3"></i>Reportes</a></li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 p-6">
+                <!-- Loading Overlay -->
+                <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 flex items-center space-x-4">
+                        <i class="fas fa-spinner loading text-blue-600 text-2xl"></i>
+                        <span class="text-gray-700">Cargando datos...</span>
+                    </div>
+                </div>
+
+                <!-- Overview Section -->
+                <div id="overviewSection" class="section">
+                    <div class="mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Resumen General</h2>
+                        <p class="text-gray-600">Vista general de tu negocio</p>
+                    </div>
+
+                    <!-- Date Filter -->
+                    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                                <input type="date" id="dateFrom" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                                <input type="date" id="dateTo" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="applyDateFilter()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                                    <i class="fas fa-filter mr-2"></i>Filtrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Ventas Totales</p>
+                                    <p class="text-3xl font-bold text-green-600" id="totalSales">L. 0.00</p>
+                                </div>
+                                <div class="bg-green-100 p-3 rounded-full">
+                                    <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Compras Totales</p>
+                                    <p class="text-3xl font-bold text-red-600" id="totalPurchases">L. 0.00</p>
+                                </div>
+                                <div class="bg-red-100 p-3 rounded-full">
+                                    <i class="fas fa-shopping-cart text-red-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Utilidad</p>
+                                    <p class="text-3xl font-bold text-blue-600" id="totalProfit">L. 0.00</p>
+                                </div>
+                                <div class="bg-blue-100 p-3 rounded-full">
+                                    <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-sm p-6 card-hover">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Clientes Activos</p>
+                                    <p class="text-3xl font-bold text-purple-600" id="activeClients">0</p>
+                                </div>
+                                <div class="bg-purple-100 p-3 rounded-full">
+                                    <i class="fas fa-users text-purple-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Ventas por Mes</h3>
+                            <div class="chart-container">
+                                <canvas id="salesChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Productos</h3>
+                            <div class="chart-container">
+                                <canvas id="productsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Section -->
+                <div id="salesSection" class="section hidden">
+                    <div class="mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Ventas</h2>
+                        <p class="text-gray-600">Gestión y análisis de ventas</p>
+                    </div>
+
+                    <!-- Sales Filters -->
+                    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                                <select id="clientFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Todos los clientes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+                                <select id="sellerFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Todos los vendedores</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                                <select id="statusFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Todos los estados</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                                <input type="date" id="salesDateFrom" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                                <input type="date" id="salesDateTo" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div class="mt-4 flex gap-2">
+                            <button onclick="applySalesFilter()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                                <i class="fas fa-filter mr-2"></i>Filtrar
+                            </button>
+                            <button onclick="exportSalesCSV()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                                <i class="fas fa-file-csv mr-2"></i>CSV
+                            </button>
+                            <button onclick="exportSalesPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200">
+                                <i class="fas fa-file-pdf mr-2"></i>PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sales Table -->
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Venta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Sales data will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other sections (purchases, clients, products, reports) would follow similar structure -->
+                <div id="purchasesSection" class="section hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Compras</h2>
+                    <p class="text-gray-600">Sección de compras en desarrollo...</p>
+                </div>
+
+                <div id="clientsSection" class="section hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Clientes</h2>
+                    <p class="text-gray-600">Sección de clientes en desarrollo...</p>
+                </div>
+
+                <div id="productsSection" class="section hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Productos</h2>
+                    <p class="text-gray-600">Sección de productos en desarrollo...</p>
+                </div>
+
+                <div id="reportsSection" class="section hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Reportes</h2>
+                    <p class="text-gray-600">Sección de reportes en desarrollo...</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let allData = {};
+        let filteredData = {};
+        let charts = {};
+
+        // Google Sheets configuration
+        const SHEETS_CONFIG = {
+            ventas: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Ventas' },
+            venta: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Venta' },
+            pagosRecibidos: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Pagos recibidos' },
+            mediosPago: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Medios de pago' },
+            abonosVentas: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Abonos ventas' },
+            abonoVentas: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Abono ventas' },
+            compras: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Compras' },
+            compra: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Compra' },
+            pagosRealizados: { id: '1zADMZLgvwKtCpJB7ekJ0hYrte9YkSHnvf1F82gSiBx8', sheet: 'Pagos realizados' },
+            articulos: { id: '1Ir9DOJhz17Y1zTjNq31Xi9MatIiw5BkMU1bk7C8B7bk', sheet: 'Articulos' },
+            categorias: { id: '1Ir9DOJhz17Y1zTjNq31Xi9MatIiw5BkMU1bk7C8B7bk', sheet: 'Categorias' },
+            proveedores: { id: '1hKT5p9zprvFWQkOZHQwYynk5Klv3IzDt61LkBeQfCd4', sheet: 'Proveedores' },
+            empleados: { id: '1VZnb2yJi3CnS_fo0RiBpmii2bjVeElfEKS1ppSCc2sc', sheet: 'Empleados' },
+            clientes: { id: '1NrqEdoN6Yw0GjHpm1n4MW2gV25Gs0jYvgXyLW6hITcE', sheet: 'Clientes' }
+        };
+
+        // Apps Script URL (you'll need to deploy your Apps Script and replace this URL)
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyek1BUL9vlmnWht2B4cQTcEP8826LxMHCPXhuzWFW9pf_dSwCs98Sb7AHGCVjKaTfczQ/exec';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            // Set default dates
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('dateFrom').value = formatDate(firstDayOfMonth);
+            document.getElementById('dateTo').value = formatDate(today);
+            document.getElementById('salesDateFrom').value = formatDate(firstDayOfMonth);
+            document.getElementById('salesDateTo').value = formatDate(today);
+
+            // Event listeners
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+
+            // Check if user is already logged in
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showDashboard();
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showError('Por favor ingresa usuario y contraseña');
+                return;
+            }
+
+            showLoading(true, 'loginBtn');
+            
+            try {
+                const employees = await fetchSheetData('empleados');
+                
+                if (!employees || employees.length === 0) {
+                    throw new Error('No se pudieron cargar los datos de empleados');
+                }
+
+                const user = employees.find(emp => 
+                    (emp.Usuario === username || emp.Email === username) && 
+                    emp.Clave === password && 
+                    emp.Estado === 'Activo' && 
+                    emp.Accesos === 'TRUE'
+                );
+
+                if (user) {
+                    currentUser = user;
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    showDashboard();
+                } else {
+                    showError('Credenciales incorrectas o usuario inactivo');
+                }
+            } catch (error) {
+                console.error('Error en login:', error);
+                showError('Error al conectar con el servidor. Intenta nuevamente.');
+            } finally {
+                showLoading(false, 'loginBtn');
+            }
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            
+            // Clear all data
+            allData = {};
+            filteredData = {};
+            
+            // Destroy charts
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            charts = {};
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            
+            // Update user info
+            document.getElementById('userWelcome').textContent = `Bienvenido, ${currentUser.Nombre}`;
+            document.getElementById('userRole').textContent = currentUser['Tipo usuario'] || 'Usuario';
+            
+            // Load initial data
+            loadAllData();
+            showSection('overview');
+        }
+
+        async function loadAllData() {
+            showLoadingOverlay(true);
+            
+            try {
+                // Load all required data
+                const dataPromises = Object.keys(SHEETS_CONFIG).map(async (key) => {
+                    try {
+                        const data = await fetchSheetData(key);
+                        allData[key] = data || [];
+                        return { key, success: true };
+                    } catch (error) {
+                        console.error(`Error loading ${key}:`, error);
+                        allData[key] = [];
+                        return { key, success: false, error };
+                    }
+                });
+
+                const results = await Promise.all(dataPromises);
+                
+                // Log results for debugging
+                results.forEach(result => {
+                    if (!result.success) {
+                        console.warn(`Failed to load ${result.key}:`, result.error);
+                    }
+                });
+
+                // Filter out invalid records
+                filterValidData();
+                
+                // Update UI
+                updateOverviewData();
+                populateFilters();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Error al cargar los datos. Algunos módulos pueden no funcionar correctamente.');
+            } finally {
+                showLoadingOverlay(false);
+            }
+        }
+
+        async function fetchSheetData(sheetKey) {
+            const config = SHEETS_CONFIG[sheetKey];
+            if (!config) {
+                throw new Error(`Configuration not found for ${sheetKey}`);
+            }
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'getData',
+                        sheetId: config.id,
+                        sheetName: config.sheet
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                return result.data || [];
+                
+            } catch (error) {
+                console.error(`Error fetching ${sheetKey}:`, error);
+                throw error;
+            }
+        }
+
+        function filterValidData() {
+            // Filter out invalid records
+            if (allData.ventas) {
+                filteredData.ventas = allData.ventas.filter(item => 
+                    item.Estatus !== 'Anulado' && item.Estado !== 'Anulado'
+                );
+            }
+
+            if (allData.compra) {
+                filteredData.compra = allData.compra.filter(item => 
+                    item.Validacion !== 'Anulada'
+                );
+            }
+
+            if (allData.empleados) {
+                filteredData.empleados = allData.empleados.filter(item => 
+                    item.Estado === 'Activo'
+                );
+            }
+
+            if (allData.clientes) {
+                filteredData.clientes = allData.clientes.filter(item => 
+                    item.Estatus !== 'Inactivo'
+                );
+            }
+
+            // Copy other data as-is
+            Object.keys(allData).forEach(key => {
+                if (!filteredData[key]) {
+                    filteredData[key] = allData[key];
+                }
+            });
+        }
+
+        function updateOverviewData() {
+            try {
+                // Calculate totals
+                const totalSales = calculateTotalSales();
+                const totalPurchases = calculateTotalPurchases();
+                const totalProfit = totalSales - totalPurchases;
+                const activeClients = filteredData.clientes ? filteredData.clientes.length : 0;
+
+                // Update KPI cards
+                document.getElementById('totalSales').textContent = formatCurrency(totalSales);
+                document.getElementById('totalPurchases').textContent = formatCurrency(totalPurchases);
+                document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
+                document.getElementById('activeClients').textContent = activeClients.toLocaleString();
+
+                // Update charts
+                updateCharts();
+                
+            } catch (error) {
+                console.error('Error updating overview data:', error);
+            }
+        }
+
+        function calculateTotalSales() {
+            if (!filteredData.venta || !Array.isArray(filteredData.venta)) return 0;
+            
+            return filteredData.venta.reduce((total, item) => {
+                const cantidad = parseFloat(item.Cantidad) || 0;
+                const precio = parseFloat(item.Precio) || 0;
+                return total + (cantidad * precio);
+            }, 0);
+        }
+
+        function calculateTotalPurchases() {
+            if (!filteredData.compra || !Array.isArray(filteredData.compra)) return 0;
+            
+            return filteredData.compra.reduce((total, item) => {
+                const monto = parseFloat(item.Monto) || 0;
+                return total + monto;
+            }, 0);
+        }
+
+        function updateCharts() {
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+
+            // Sales by month chart
+            createSalesChart();
+            
+            // Top products chart
+            createProductsChart();
+        }
+
+        function createSalesChart() {
+            const ctx = document.getElementById('salesChart');
+            if (!ctx) return;
+
+            try {
+                const salesByMonth = getSalesByMonth();
+                
+                charts.sales = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: salesByMonth.labels,
+                        datasets: [{
+                            label: 'Ventas',
+                            data: salesByMonth.data,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'L. ' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error creating sales chart:', error);
+            }
+        }
+
+        function createProductsChart() {
+            const ctx = document.getElementById('productsChart');
+            if (!ctx) return;
+
+            try {
+                const topProducts = getTopProducts();
+                
+                charts.products = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: topProducts.labels,
+                        datasets: [{
+                            data: topProducts.data,
+                            backgroundColor: [
+                                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+                                '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6B7280'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error creating products chart:', error);
+            }
+        }
+
+        function getSalesByMonth() {
+            const monthlyData = {};
+            const currentYear = new Date().getFullYear();
+            
+            // Initialize months
+            for (let i = 0; i < 12; i++) {
+                const monthKey = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
+                monthlyData[monthKey] = 0;
+            }
+
+            if (filteredData.venta && Array.isArray(filteredData.venta)) {
+                filteredData.venta.forEach(item => {
+                    if (item.Fecha) {
+                        const date = new Date(item.Fecha);
+                        if (date.getFullYear() === currentYear) {
+                            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                            const cantidad = parseFloat(item.Cantidad) || 0;
+                            const precio = parseFloat(item.Precio) || 0;
+                            monthlyData[monthKey] += cantidad * precio;
+                        }
+                    }
+                });
+            }
+
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            return {
+                labels: months,
+                data: Object.values(monthlyData)
+            };
+        }
+
+        function getTopProducts() {
+            const productSales = {};
+
+            if (filteredData.venta && Array.isArray(filteredData.venta)) {
+                filteredData.venta.forEach(item => {
+                    const producto = item.Producto || 'Sin especificar';
+                    const cantidad = parseFloat(item.Cantidad) || 0;
+                    
+                    if (!productSales[producto]) {
+                        productSales[producto] = 0;
+                    }
+                    productSales[producto] += cantidad;
+                });
+            }
+
+            // Sort and get top 10
+            const sortedProducts = Object.entries(productSales)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+
+            return {
+                labels: sortedProducts.map(([name]) => name),
+                data: sortedProducts.map(([,quantity]) => quantity)
+            };
+        }
+
+        function populateFilters() {
+            // Populate client filter
+            const clientSelect = document.getElementById('clientFilter');
+            if (clientSelect && filteredData.clientes) {
+                clientSelect.innerHTML = '<option value="">Todos los clientes</option>';
+                filteredData.clientes.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client.Codigo;
+                    option.textContent = `${client.Codigo} - ${client.Nombre}`;
+                    clientSelect.appendChild(option);
+                });
+            }
+
+            // Populate seller filter
+            const sellerSelect = document.getElementById('sellerFilter');
+            if (sellerSelect && filteredData.empleados) {
+                sellerSelect.innerHTML = '<option value="">Todos los vendedores</option>';
+                filteredData.empleados.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee.Empleadoid;
+                    option.textContent = employee.Nombre;
+                    sellerSelect.appendChild(option);
+                });
+            }
+
+            // Populate status filter
+            const statusSelect = document.getElementById('statusFilter');
+            if (statusSelect && filteredData.ventas) {
+                const statuses = [...new Set(filteredData.ventas.map(v => v.Estado).filter(Boolean))];
+                statusSelect.innerHTML = '<option value="">Todos los estados</option>';
+                statuses.forEach(status => {
+                    const option = document.createElement('option');
+                    option.value = status;
+                    option.textContent = status;
+                    statusSelect.appendChild(option);
+                });
+            }
+        }
+
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Show selected section
+            const targetSection = document.getElementById(sectionName + 'Section');
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('bg-blue-50', 'text-blue-600');
+            });
+
+            // Add active class to current nav item
+            event.target.classList.add('bg-blue-50', 'text-blue-600');
+
+            // Load section-specific data
+            if (sectionName === 'sales') {
+                loadSalesData();
+            }
+        }
+
+        function loadSalesData() {
+            const tbody = document.getElementById('salesTableBody');
+            if (!tbody || !filteredData.ventas) return;
+
+            tbody.innerHTML = '';
+
+            filteredData.ventas.forEach(sale => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                // Calculate total for this sale
+                const saleDetails = filteredData.venta ? 
+                    filteredData.venta.filter(detail => detail['No Venta'] === sale['No Venta']) : [];
+                
+                const total = saleDetails.reduce((sum, detail) => {
+                    const cantidad = parseFloat(detail.Cantidad) || 0;
+                    const precio = parseFloat(detail.Precio) || 0;
+                    return sum + (cantidad * precio);
+                }, 0);
+
+                // Get client name
+                const client = filteredData.clientes ? 
+                    filteredData.clientes.find(c => c.Codigo === sale.Cliente) : null;
+                const clientName = client ? client.Nombre : sale.Cliente;
+
+                // Get seller name
+                const seller = filteredData.empleados ? 
+                    filteredData.empleados.find(e => e.Empleadoid === sale.Vendedor) : null;
+                const sellerName = seller ? seller.Nombre : sale.Vendedor;
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${sale['No Venta'] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(sale.Fecha)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${clientName || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${sellerName || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCurrency(total)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(sale.Estado)}">
+                            ${sale.Estado || 'Sin estado'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="viewSaleDetails('${sale['No Venta']}')" class="text-blue-600 hover:text-blue-900">Ver detalles</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'Completada': 'bg-green-100 text-green-800',
+                'Pendiente': 'bg-yellow-100 text-yellow-800',
+                'Cancelada': 'bg-red-100 text-red-800',
+                'Procesando': 'bg-blue-100 text-blue-800'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        function viewSaleDetails(saleNumber) {
+            // Implementation for viewing sale details
+            console.log('Viewing details for sale:', saleNumber);
+            // You can implement a modal or navigate to a detail view
+        }
+
+        function applySalesFilter() {
+            // Implementation for applying sales filters
+            console.log('Applying sales filters');
+            // Filter the sales data based on selected criteria and reload the table
+        }
+
+        function applyDateFilter() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            
+            if (dateFrom && dateTo) {
+                // Filter data by date range and update overview
+                console.log('Applying date filter:', dateFrom, 'to', dateTo);
+                updateOverviewData();
+            }
+        }
+
+        function exportSalesCSV() {
+            // Implementation for CSV export
+            console.log('Exporting sales to CSV');
+        }
+
+        function exportSalesPDF() {
+            // Implementation for PDF export
+            console.log('Exporting sales to PDF');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        function showLoading(show, buttonId) {
+            const button = document.getElementById(buttonId);
+            const spinner = document.getElementById(buttonId.replace('Btn', 'Spinner'));
+            const text = document.getElementById(buttonId.replace('Btn', 'BtnText'));
+            
+            if (show) {
+                button.disabled = true;
+                if (spinner) spinner.classList.remove('hidden');
+                if (text) text.textContent = 'Cargando...';
+            } else {
+                button.disabled = false;
+                if (spinner) spinner.classList.add('hidden');
+                if (text) text.textContent = 'Iniciar Sesión';
+            }
+        }
+
+        function showLoadingOverlay(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-HN');
+        }
+
+        function formatCurrency(amount) {
+            return 'L. ' + (amount || 0).toLocaleString('es-HN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Handle responsive sidebar
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            
+            if (window.innerWidth < 1024 && 
+                !sidebar.contains(event.target) && 
+                !sidebarToggle.contains(event.target)) {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9817a1b5b2ff19be',t:'MTc1ODI2OTY4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
