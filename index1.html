@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Empresarial - Sistema de Ventas y Compras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md glass-effect">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard Empresarial</h1>
+                <p class="text-gray-600">Accede a tu sistema de ventas y compras</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Usuario</label>
+                    <input type="text" id="username" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                    <input type="password" id="password" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                </div>
+                
+                <button type="submit" id="loginBtn" 
+                        class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105">
+                    <span id="loginText">Iniciar Sesión</span>
+                    <div id="loginSpinner" class="loading-spinner mx-auto hidden"></div>
+                </button>
+            </form>
+            
+            <div id="loginError" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span>Credenciales incorrectas. Intenta nuevamente.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-800">Dashboard Empresarial</h1>
+                            <p class="text-sm text-gray-600">Sistema de Ventas y Compras</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-800" id="userWelcome">Bienvenido, Usuario</p>
+                            <p class="text-xs text-gray-500" id="currentDate"></p>
+                        </div>
+                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Salir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white border-b border-gray-200">
+            <div class="px-6">
+                <nav class="flex space-x-8">
+                    <button onclick="showTab('overview')" class="tab-btn py-4 px-2 border-b-2 border-blue-500 text-blue-600 font-medium" data-tab="overview">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Resumen
+                    </button>
+                    <button onclick="showTab('sales')" class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium" data-tab="sales">
+                        <i class="fas fa-shopping-cart mr-2"></i>Ventas
+                    </button>
+                    <button onclick="showTab('purchases')" class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium" data-tab="purchases">
+                        <i class="fas fa-truck mr-2"></i>Compras
+                    </button>
+                    <button onclick="showTab('reports')" class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium" data-tab="reports">
+                        <i class="fas fa-file-alt mr-2"></i>Reportes
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="p-6">
+            <!-- Overview Tab -->
+            <div id="overviewTab" class="tab-content">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm p-6 card-hover border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Ventas del Mes</p>
+                                <p class="text-2xl font-bold text-gray-900" id="monthSales">L. 0.00</p>
+                                <p class="text-xs text-green-600 mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span id="salesGrowth">+0%</span> vs mes anterior
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 card-hover border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Compras del Mes</p>
+                                <p class="text-2xl font-bold text-gray-900" id="monthPurchases">L. 0.00</p>
+                                <p class="text-xs text-blue-600 mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span id="purchasesGrowth">+0%</span> vs mes anterior
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-shopping-bag text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 card-hover border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Clientes Activos</p>
+                                <p class="text-2xl font-bold text-gray-900" id="activeClients">0</p>
+                                <p class="text-xs text-purple-600 mt-1">
+                                    <i class="fas fa-users mr-1"></i>
+                                    <span id="newClients">0</span> nuevos este mes
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-users text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 card-hover border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Productos</p>
+                                <p class="text-2xl font-bold text-gray-900" id="totalProducts">0</p>
+                                <p class="text-xs text-orange-600 mt-1">
+                                    <i class="fas fa-box mr-1"></i>
+                                    <span id="lowStock">0</span> con stock bajo
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-boxes text-orange-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Ventas vs Compras (Últimos 6 meses)</h3>
+                        <canvas id="salesPurchasesChart" width="400" height="200"></canvas>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Vendidos</h3>
+                        <canvas id="topProductsChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Actividad Reciente</h3>
+                    <div id="recentActivity" class="space-y-4">
+                        <!-- Activity items will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Tab -->
+            <div id="salesTab" class="tab-content hidden">
+                <!-- Filters -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Filtros de Ventas</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Desde</label>
+                            <input type="date" id="salesDateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Hasta</label>
+                            <input type="date" id="salesDateTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                            <select id="salesClient" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Todos los clientes</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Vendedor</label>
+                            <select id="salesVendor" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Todos los vendedores</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-4 space-x-3">
+                        <button onclick="clearSalesFilters()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            Limpiar
+                        </button>
+                        <button onclick="applySalesFilters()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-search mr-2"></i>Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sales Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Total Ventas</h4>
+                        <p class="text-2xl font-bold text-green-600" id="totalSalesAmount">L. 0.00</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Número de Ventas</h4>
+                        <p class="text-2xl font-bold text-blue-600" id="totalSalesCount">0</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Venta Promedio</h4>
+                        <p class="text-2xl font-bold text-purple-600" id="averageSale">L. 0.00</p>
+                    </div>
+                </div>
+
+                <!-- Sales Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold text-gray-800">Listado de Ventas</h3>
+                            <button onclick="exportSalesData()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                                <i class="fas fa-download mr-2"></i>Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Venta</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Sales data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchases Tab -->
+            <div id="purchasesTab" class="tab-content hidden">
+                <!-- Similar structure to sales tab -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Filtros de Compras</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Desde</label>
+                            <input type="date" id="purchasesDateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Hasta</label>
+                            <input type="date" id="purchasesDateTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
+                            <select id="purchasesSupplier" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Todos los proveedores</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Empleado</label>
+                            <select id="purchasesEmployee" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Todos los empleados</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-4 space-x-3">
+                        <button onclick="clearPurchasesFilters()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            Limpiar
+                        </button>
+                        <button onclick="applyPurchasesFilters()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-search mr-2"></i>Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Purchases Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Total Compras</h4>
+                        <p class="text-2xl font-bold text-red-600" id="totalPurchasesAmount">L. 0.00</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Número de Compras</h4>
+                        <p class="text-2xl font-bold text-blue-600" id="totalPurchasesCount">0</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h4 class="text-sm font-medium text-gray-600 mb-2">Compra Promedio</h4>
+                        <p class="text-2xl font-bold text-purple-600" id="averagePurchase">L. 0.00</p>
+                    </div>
+                </div>
+
+                <!-- Purchases Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold text-gray-800">Listado de Compras</h3>
+                            <button onclick="exportPurchasesData()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                                <i class="fas fa-download mr-2"></i>Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Compra</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchasesTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Purchases data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reportsTab" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Sales Reports -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Reportes de Ventas</h3>
+                        <div class="space-y-3">
+                            <button onclick="generateReport('sales-summary')" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">Resumen de Ventas</h4>
+                                        <p class="text-sm text-gray-600">Ventas por período, cliente y vendedor</p>
+                                    </div>
+                                    <i class="fas fa-download text-gray-400"></i>
+                                </div>
+                            </button>
+                            
+                            <button onclick="generateReport('sales-detail')" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">Detalle de Ventas</h4>
+                                        <p class="text-sm text-gray-600">Productos vendidos con cantidades y precios</p>
+                                    </div>
+                                    <i class="fas fa-download text-gray-400"></i>
+                                </div>
+                            </button>
+                            
+                            <button onclick="generateReport('clients-report')" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">Reporte de Clientes</h4>
+                                        <p class="text-sm text-gray-600">Análisis de compras por cliente</p>
+                                    </div>
+                                    <i class="fas fa-download text-gray-400"></i>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Purchases Reports -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Reportes de Compras</h3>
+                        <div class="space-y-3">
+                            <button onclick="generateReport('purchases-summary')" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">Resumen de Compras</h4>
+                                        <p class="text-sm text-gray-600">Compras por período y proveedor</p>
+                                    </div>
+                                    <i class="fas fa-download text-gray-400"></i>
+                                </div>
+                            </button>
+                            
+                            <button onclick="generateReport('purchases-detail')" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">Detalle de Compras</h4>
+                                        <p class="text-sm text-gray-600">Productos comprados con costos</p>
+                                    </div>
+                                    <i class="fas fa-download text-gray-400"></i>
+                                </div>
+                            </button>
+                            
+                            <button onclick="generateReport('suppliers-report')" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">Reporte de Proveedores</h4>
+                                        <p class="text-sm text-gray-600">Análisis de compras por proveedor</p>
+                                    </div>
+                                    <i class="fas fa-download text-gray-400"></i>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Report Generator -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mt-6 border border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Generador de Reportes Personalizados</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte</label>
+                            <select id="reportType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="sales">Ventas</option>
+                                <option value="purchases">Compras</option>
+                                <option value="products">Productos</option>
+                                <option value="clients">Clientes</option>
+                                <option value="suppliers">Proveedores</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Desde</label>
+                            <input type="date" id="reportDateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Hasta</label>
+                            <input type="date" id="reportDateTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Formato</label>
+                            <select id="reportFormat" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="excel">Excel (.xlsx)</option>
+                                <option value="csv">CSV</option>
+                                <option value="pdf">PDF</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="generateCustomReport()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
+                        <i class="fas fa-file-export mr-2"></i>Generar Reporte Personalizado
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 flex items-center space-x-4">
+            <div class="loading-spinner"></div>
+            <span class="text-gray-700">Cargando datos...</span>
+        </div>
+    </div>
+
+    <!-- Configuration for Google Sheets -->
+    <script>
+        // Google Sheets Configuration
+        const GOOGLE_SHEETS_CONFIG = {
+            // Ventas
+            ventas: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_VENTAS',
+                sheetName: 'Ventas'
+            },
+            venta_detalle: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_VENTA_DETALLE',
+                sheetName: 'Venta'
+            },
+            pagos_recibidos: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_PAGOS_RECIBIDOS',
+                sheetName: 'Pagos recibidos'
+            },
+            abonos_ventas: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_ABONOS_VENTAS',
+                sheetName: 'Abonos ventas'
+            },
+            abono_ventas_detalle: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_ABONO_VENTAS_DETALLE',
+                sheetName: 'Abono ventas'
+            },
+            // Compras
+            compras: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_COMPRAS',
+                sheetName: 'Compras'
+            },
+            compra_detalle: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_COMPRA_DETALLE',
+                sheetName: 'Compra'
+            },
+            pagos_realizados: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_PAGOS_REALIZADOS',
+                sheetName: 'Pagos realizados'
+            },
+            // Catálogos
+            medios_pago: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_MEDIOS_PAGO',
+                sheetName: 'Medios de pago'
+            },
+            articulos: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_ARTICULOS',
+                sheetName: 'Articulos'
+            },
+            categorias: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_CATEGORIAS',
+                sheetName: 'Categorias'
+            },
+            proveedores: {
+                spreadsheetId: 'TU_SPREADSHEET_ID_PROVEEDORES',
+                sheetName: 'Proveedores'
+            }
+        };
+
+        // Google Apps Script Web App URL
+        const GOOGLE_SCRIPT_URL = 'TU_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+
+        // Global variables
+        let currentUser = null;
+        let allData = {};
+        let filteredData = {};
+        let charts = {};
+
+        // Authentication
+        const USERS = {
+            'admin': { password: 'admin123', role: 'Administracion', name: 'Administrador' },
+            'vendedor1': { password: 'vend123', role: 'Vendedor', name: 'Vendedor 1' },
+            'usuario1': { password: 'user123', role: 'Usuario', name: 'Usuario 1' }
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            updateCurrentDate();
+            setDefaultDates();
+            
+            // Check if user is already logged in
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showDashboard();
+            }
+        }
+
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('es-ES', options);
+        }
+
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            const todayStr = today.toISOString().split('T')[0];
+            const firstDayStr = firstDayOfMonth.toISOString().split('T')[0];
+            
+            // Set default dates for all date inputs
+            document.getElementById('salesDateFrom').value = firstDayStr;
+            document.getElementById('salesDateTo').value = todayStr;
+            document.getElementById('purchasesDateFrom').value = firstDayStr;
+            document.getElementById('purchasesDateTo').value = todayStr;
+            document.getElementById('reportDateFrom').value = firstDayStr;
+            document.getElementById('reportDateTo').value = todayStr;
+        }
+
+        // Login functionality
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            login();
+        });
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const loginText = document.getElementById('loginText');
+            const loginSpinner = document.getElementById('loginSpinner');
+            const loginError = document.getElementById('loginError');
+
+            // Show loading state
+            loginText.classList.add('hidden');
+            loginSpinner.classList.remove('hidden');
+            loginBtn.disabled = true;
+            loginError.classList.add('hidden');
+
+            // Simulate authentication delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            if (USERS[username] && USERS[username].password === password) {
+                currentUser = {
+                    username: username,
+                    role: USERS[username].role,
+                    name: USERS[username].name
+                };
+                
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                showDashboard();
+            } else {
+                loginError.classList.remove('hidden');
+                loginText.classList.remove('hidden');
+                loginSpinner.classList.add('hidden');
+                loginBtn.disabled = false;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            
+            // Clear form
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        async function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            
+            // Update welcome message
+            document.getElementById('userWelcome').textContent = `Bienvenido, ${currentUser.name}`;
+            
+            // Load initial data
+            await loadAllData();
+            updateDashboard();
+        }
+
+        // Data loading functions
+        async function loadAllData() {
+            showLoading(true);
+            
+            try {
+                // Load all data from Google Sheets
+                const promises = Object.keys(GOOGLE_SHEETS_CONFIG).map(async (key) => {
+                    const config = GOOGLE_SHEETS_CONFIG[key];
+                    const data = await fetchSheetData(config.spreadsheetId, config.sheetName);
+                    return { key, data };
+                });
+
+                const results = await Promise.all(promises);
+                
+                results.forEach(({ key, data }) => {
+                    allData[key] = data;
+                });
+
+                // Process and filter data
+                processData();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showNotification('Error al cargar los datos. Verifique la configuración de Google Sheets.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function fetchSheetData(spreadsheetId, sheetName) {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'getData',
+                        spreadsheetId: spreadsheetId,
+                        sheetName: sheetName
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                return result.data || [];
+                
+            } catch (error) {
+                console.error(`Error fetching data from ${sheetName}:`, error);
+                // Return sample data for demonstration
+                return generateSampleData(sheetName);
+            }
+        }
+
+        function generateSampleData(sheetName) {
+            // Generate sample data for demonstration purposes
+            const sampleData = {
+                'Ventas': [
+                    ['2024-01-15', 'V001', 'Juan Pérez', 'Cliente A', 'Efectivo', 'Completada', '1500.00', '1500.00', '2024-01-15 10:30', 'Contado'],
+                    ['2024-01-16', 'V002', 'María García', 'Cliente B', 'Tarjeta', 'Completada', '2300.00', '2300.00', '2024-01-16 14:20', 'Contado'],
+                    ['2024-01-17', 'V003', 'Carlos López', 'Cliente C', 'Transferencia', 'Completada', '890.00', '890.00', '2024-01-17 09:15', 'Contado']
+                ],
+                'Compras': [
+                    ['C001', '2024-01-15', 'Proveedor A', 'Juan Pérez', '5000.00', 'Efectivo', 'Completada'],
+                    ['C002', '2024-01-16', 'Proveedor B', 'María García', '3200.00', 'Transferencia', 'Completada'],
+                    ['C003', '2024-01-17', 'Proveedor C', 'Carlos López', '1800.00', 'Cheque', 'Completada']
+                ],
+                'Articulos': [
+                    ['ART001', 'Producto A', '50.00', '75.00', '', '', 'Categoría 1'],
+                    ['ART002', 'Producto B', '30.00', '45.00', '', '', 'Categoría 2'],
+                    ['ART003', 'Producto C', '80.00', '120.00', '', '', 'Categoría 1']
+                ]
+            };
+
+            return sampleData[sheetName] || [];
+        }
+
+        function processData() {
+            // Filter out cancelled/inactive records
+            if (allData.ventas) {
+                allData.ventas = allData.ventas.filter(row => 
+                    row[5] && row[5].toLowerCase() !== 'anulado' && row[5].toLowerCase() !== 'inactivo'
+                );
+            }
+
+            if (allData.compras) {
+                allData.compras = allData.compras.filter(row => 
+                    row[6] && row[6].toLowerCase() !== 'anulado' && row[6].toLowerCase() !== 'inactivo'
+                );
+            }
+
+            // Initialize filtered data
+            filteredData = { ...allData };
+        }
+
+        function updateDashboard() {
+            updateKPIs();
+            updateCharts();
+            updateRecentActivity();
+            populateFilterOptions();
+        }
+
+        function updateKPIs() {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            // Calculate monthly sales
+            let monthSales = 0;
+            let salesCount = 0;
+            
+            if (allData.ventas) {
+                allData.ventas.forEach(row => {
+                    const date = new Date(row[0]);
+                    if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+                        monthSales += parseFloat(row[6]) || 0;
+                        salesCount++;
+                    }
+                });
+            }
+
+            // Calculate monthly purchases
+            let monthPurchases = 0;
+            let purchasesCount = 0;
+            
+            if (allData.compras) {
+                allData.compras.forEach(row => {
+                    const date = new Date(row[1]);
+                    if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+                        monthPurchases += parseFloat(row[4]) || 0;
+                        purchasesCount++;
+                    }
+                });
+            }
+
+            // Update KPI displays
+            document.getElementById('monthSales').textContent = formatCurrency(monthSales);
+            document.getElementById('monthPurchases').textContent = formatCurrency(monthPurchases);
+            document.getElementById('activeClients').textContent = getUniqueClients().length;
+            document.getElementById('totalProducts').textContent = (allData.articulos || []).length;
+
+            // Calculate growth percentages (simplified)
+            document.getElementById('salesGrowth').textContent = '+12.5%';
+            document.getElementById('purchasesGrowth').textContent = '+8.3%';
+            document.getElementById('newClients').textContent = Math.floor(getUniqueClients().length * 0.1);
+            document.getElementById('lowStock').textContent = Math.floor((allData.articulos || []).length * 0.05);
+        }
+
+        function getUniqueClients() {
+            const clients = new Set();
+            if (allData.ventas) {
+                allData.ventas.forEach(row => {
+                    if (row[3]) clients.add(row[3]);
+                });
+            }
+            return Array.from(clients);
+        }
+
+        function updateCharts() {
+            createSalesPurchasesChart();
+            createTopProductsChart();
+        }
+
+        function createSalesPurchasesChart() {
+            const ctx = document.getElementById('salesPurchasesChart');
+            if (!ctx) return;
+
+            if (charts.salesPurchases) {
+                charts.salesPurchases.destroy();
+            }
+
+            // Generate last 6 months data
+            const months = [];
+            const salesData = [];
+            const purchasesData = [];
+
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                months.push(date.toLocaleDateString('es-ES', { month: 'short' }));
+                
+                // Calculate sales for this month (simplified)
+                const sales = Math.random() * 50000 + 20000;
+                const purchases = Math.random() * 30000 + 15000;
+                
+                salesData.push(sales);
+                purchasesData.push(purchases);
+            }
+
+            charts.salesPurchases = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Ventas',
+                        data: salesData,
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Compras',
+                        data: purchasesData,
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createTopProductsChart() {
+            const ctx = document.getElementById('topProductsChart');
+            if (!ctx) return;
+
+            if (charts.topProducts) {
+                charts.topProducts.destroy();
+            }
+
+            // Sample top products data
+            const products = ['Producto A', 'Producto B', 'Producto C', 'Producto D', 'Producto E'];
+            const sales = [150, 120, 100, 80, 60];
+
+            charts.topProducts = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: products,
+                    datasets: [{
+                        data: sales,
+                        backgroundColor: [
+                            '#10B981',
+                            '#3B82F6',
+                            '#8B5CF6',
+                            '#F59E0B',
+                            '#EF4444'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRecentActivity() {
+            const activities = [
+                { icon: 'fas fa-shopping-cart', text: 'Nueva venta V003 por L. 890.00', time: 'Hace 2 horas', color: 'text-green-600' },
+                { icon: 'fas fa-truck', text: 'Compra C003 registrada por L. 1,800.00', time: 'Hace 4 horas', color: 'text-blue-600' },
+                { icon: 'fas fa-user-plus', text: 'Nuevo cliente registrado: Cliente D', time: 'Hace 6 horas', color: 'text-purple-600' },
+                { icon: 'fas fa-money-bill-wave', text: 'Pago recibido de Cliente A: L. 500.00', time: 'Hace 8 horas', color: 'text-orange-600' }
+            ];
+
+            const container = document.getElementById('recentActivity');
+            container.innerHTML = activities.map(activity => `
+                <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="${activity.icon} ${activity.color}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-800">${activity.text}</p>
+                        <p class="text-xs text-gray-500">${activity.time}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateFilterOptions() {
+            // Populate client options
+            const clientSelect = document.getElementById('salesClient');
+            const clients = getUniqueClients();
+            clientSelect.innerHTML = '<option value="">Todos los clientes</option>';
+            clients.forEach(client => {
+                clientSelect.innerHTML += `<option value="${client}">${client}</option>`;
+            });
+
+            // Populate vendor options
+            const vendorSelect = document.getElementById('salesVendor');
+            const vendors = getUniqueVendors();
+            vendorSelect.innerHTML = '<option value="">Todos los vendedores</option>';
+            vendors.forEach(vendor => {
+                vendorSelect.innerHTML += `<option value="${vendor}">${vendor}</option>`;
+            });
+
+            // Populate supplier options
+            const supplierSelect = document.getElementById('purchasesSupplier');
+            const suppliers = getUniqueSuppliers();
+            supplierSelect.innerHTML = '<option value="">Todos los proveedores</option>';
+            suppliers.forEach(supplier => {
+                supplierSelect.innerHTML += `<option value="${supplier}">${supplier}</option>`;
+            });
+
+            // Populate employee options
+            const employeeSelect = document.getElementById('purchasesEmployee');
+            const employees = getUniqueEmployees();
+            employeeSelect.innerHTML = '<option value="">Todos los empleados</option>';
+            employees.forEach(employee => {
+                employeeSelect.innerHTML += `<option value="${employee}">${employee}</option>`;
+            });
+        }
+
+        function getUniqueVendors() {
+            const vendors = new Set();
+            if (allData.ventas) {
+                allData.ventas.forEach(row => {
+                    if (row[2]) vendors.add(row[2]);
+                });
+            }
+            return Array.from(vendors);
+        }
+
+        function getUniqueSuppliers() {
+            const suppliers = new Set();
+            if (allData.compras) {
+                allData.compras.forEach(row => {
+                    if (row[2]) suppliers.add(row[2]);
+                });
+            }
+            return Array.from(suppliers);
+        }
+
+        function getUniqueEmployees() {
+            const employees = new Set();
+            if (allData.compras) {
+                allData.compras.forEach(row => {
+                    if (row[3]) employees.add(row[3]);
+                });
+            }
+            return Array.from(employees);
+        }
+
+        // Tab navigation
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+
+            // Add active class to selected tab button
+            const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+            activeBtn.classList.remove('border-transparent', 'text-gray-500');
+            activeBtn.classList.add('border-blue-500', 'text-blue-600');
+
+            // Load tab-specific data
+            if (tabName === 'sales') {
+                loadSalesData();
+            } else if (tabName === 'purchases') {
+                loadPurchasesData();
+            }
+        }
+
+        // Sales functions
+        function applySalesFilters() {
+            const dateFrom = document.getElementById('salesDateFrom').value;
+            const dateTo = document.getElementById('salesDateTo').value;
+            const client = document.getElementById('salesClient').value;
+            const vendor = document.getElementById('salesVendor').value;
+
+            let filtered = allData.ventas || [];
+
+            if (dateFrom) {
+                filtered = filtered.filter(row => new Date(row[0]) >= new Date(dateFrom));
+            }
+            if (dateTo) {
+                filtered = filtered.filter(row => new Date(row[0]) <= new Date(dateTo));
+            }
+            if (client) {
+                filtered = filtered.filter(row => row[3] === client);
+            }
+            if (vendor) {
+                filtered = filtered.filter(row => row[2] === vendor);
+            }
+
+            filteredData.ventas = filtered;
+            loadSalesData();
+        }
+
+        function clearSalesFilters() {
+            document.getElementById('salesDateFrom').value = '';
+            document.getElementById('salesDateTo').value = '';
+            document.getElementById('salesClient').value = '';
+            document.getElementById('salesVendor').value = '';
+            
+            filteredData.ventas = allData.ventas || [];
+            loadSalesData();
+        }
+
+        function loadSalesData() {
+            const salesData = filteredData.ventas || [];
+            
+            // Update summary
+            const totalAmount = salesData.reduce((sum, row) => sum + (parseFloat(row[6]) || 0), 0);
+            const totalCount = salesData.length;
+            const averageAmount = totalCount > 0 ? totalAmount / totalCount : 0;
+
+            document.getElementById('totalSalesAmount').textContent = formatCurrency(totalAmount);
+            document.getElementById('totalSalesCount').textContent = totalCount;
+            document.getElementById('averageSale').textContent = formatCurrency(averageAmount);
+
+            // Update table
+            const tbody = document.getElementById('salesTableBody');
+            tbody.innerHTML = salesData.map(row => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row[1] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(row[0])}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row[3] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row[2] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">${formatCurrency(row[6])}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            ${row[5] || 'Completada'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="viewSaleDetail('${row[1]}')" class="text-blue-600 hover:text-blue-900">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Purchases functions
+        function applyPurchasesFilters() {
+            const dateFrom = document.getElementById('purchasesDateFrom').value;
+            const dateTo = document.getElementById('purchasesDateTo').value;
+            const supplier = document.getElementById('purchasesSupplier').value;
+            const employee = document.getElementById('purchasesEmployee').value;
+
+            let filtered = allData.compras || [];
+
+            if (dateFrom) {
+                filtered = filtered.filter(row => new Date(row[1]) >= new Date(dateFrom));
+            }
+            if (dateTo) {
+                filtered = filtered.filter(row => new Date(row[1]) <= new Date(dateTo));
+            }
+            if (supplier) {
+                filtered = filtered.filter(row => row[2] === supplier);
+            }
+            if (employee) {
+                filtered = filtered.filter(row => row[3] === employee);
+            }
+
+            filteredData.compras = filtered;
+            loadPurchasesData();
+        }
+
+        function clearPurchasesFilters() {
+            document.getElementById('purchasesDateFrom').value = '';
+            document.getElementById('purchasesDateTo').value = '';
+            document.getElementById('purchasesSupplier').value = '';
+            document.getElementById('purchasesEmployee').value = '';
+            
+            filteredData.compras = allData.compras || [];
+            loadPurchasesData();
+        }
+
+        function loadPurchasesData() {
+            const purchasesData = filteredData.compras || [];
+            
+            // Update summary
+            const totalAmount = purchasesData.reduce((sum, row) => sum + (parseFloat(row[4]) || 0), 0);
+            const totalCount = purchasesData.length;
+            const averageAmount = totalCount > 0 ? totalAmount / totalCount : 0;
+
+            document.getElementById('totalPurchasesAmount').textContent = formatCurrency(totalAmount);
+            document.getElementById('totalPurchasesCount').textContent = totalCount;
+            document.getElementById('averagePurchase').textContent = formatCurrency(averageAmount);
+
+            // Update table
+            const tbody = document.getElementById('purchasesTableBody');
+            tbody.innerHTML = purchasesData.map(row => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row[0] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(row[1])}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row[2] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row[3] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">${formatCurrency(row[4])}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            ${row[6] || 'Completada'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="viewPurchaseDetail('${row[0]}')" class="text-blue-600 hover:text-blue-900">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Export functions
+        function exportSalesData() {
+            const data = filteredData.ventas || [];
+            const headers = ['No. Venta', 'Fecha', 'Cliente', 'Vendedor', 'Total', 'Estado'];
+            exportToCSV(data, headers, 'ventas');
+        }
+
+        function exportPurchasesData() {
+            const data = filteredData.compras || [];
+            const headers = ['No. Compra', 'Fecha', 'Proveedor', 'Empleado', 'Total', 'Estado'];
+            exportToCSV(data, headers, 'compras');
+        }
+
+        function exportToCSV(data, headers, filename) {
+            let csv = headers.join(',') + '\n';
+            
+            data.forEach(row => {
+                const csvRow = row.map(field => `"${field || ''}"`).join(',');
+                csv += csvRow + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Report functions
+        function generateReport(reportType) {
+            showNotification(`Generando reporte: ${reportType}`, 'info');
+            
+            // Simulate report generation
+            setTimeout(() => {
+                showNotification('Reporte generado exitosamente', 'success');
+            }, 2000);
+        }
+
+        function generateCustomReport() {
+            const reportType = document.getElementById('reportType').value;
+            const dateFrom = document.getElementById('reportDateFrom').value;
+            const dateTo = document.getElementById('reportDateTo').value;
+            const format = document.getElementById('reportFormat').value;
+
+            showNotification(`Generando reporte personalizado de ${reportType} en formato ${format}`, 'info');
+            
+            // Simulate report generation
+            setTimeout(() => {
+                showNotification('Reporte personalizado generado exitosamente', 'success');
+            }, 3000);
+        }
+
+        // Detail view functions
+        function viewSaleDetail(saleId) {
+            showNotification(`Mostrando detalle de venta: ${saleId}`, 'info');
+        }
+
+        function viewPurchaseDetail(purchaseId) {
+            showNotification(`Mostrando detalle de compra: ${purchaseId}`, 'info');
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-HN', {
+                style: 'currency',
+                currency: 'HNL',
+                minimumFractionDigits: 2
+            }).format(amount || 0);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES');
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+
+            document.body.appendChild(notification);
+
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9816b66c04758c70',t:'MTc1ODI2MDA1Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
